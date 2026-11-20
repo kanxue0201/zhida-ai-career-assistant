@@ -66,22 +66,27 @@ class UpstreamError extends Error {
 
 type Usage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 
-function positiveInteger(value: string | undefined, fallback: number) {
+function requiredPositiveInteger(value: string | undefined) {
   const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw new UpstreamError("AI_NOT_CONFIGURED", 503);
+  return parsed;
 }
 
 function modelName() {
-  return process.env.DEEPSEEK_MODEL || "deepseek-chat";
+  return process.env.DEEPSEEK_MODEL?.trim() || "missing-model";
 }
 
 async function callDeepSeek(input: AnalysisInput): Promise<{ candidate: unknown; usage?: Usage }> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey || apiKey === "your_api_key_here") throw new UpstreamError("AI_NOT_CONFIGURED", 503);
+  const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
+  const baseUrlValue = process.env.DEEPSEEK_BASE_URL?.trim();
+  const model = modelName();
+  if (!apiKey || apiKey === "your_api_key_here" || !baseUrlValue || model === "missing-model") {
+    throw new UpstreamError("AI_NOT_CONFIGURED", 503);
+  }
 
-  const baseUrl = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
-  const timeoutMs = positiveInteger(process.env.DEEPSEEK_TIMEOUT_MS, 90_000);
-  const maxTokens = positiveInteger(process.env.DEEPSEEK_MAX_TOKENS, 8_000);
+  const baseUrl = baseUrlValue.replace(/\/$/, "");
+  const timeoutMs = requiredPositiveInteger(process.env.DEEPSEEK_TIMEOUT_MS);
+  const maxTokens = requiredPositiveInteger(process.env.DEEPSEEK_MAX_TOKENS);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -90,7 +95,7 @@ async function callDeepSeek(input: AnalysisInput): Promise<{ candidate: unknown;
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: modelName(),
+        model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: `请分析以下数据并严格按约定 JSON 输出。\n\n${JSON.stringify({ resumeText: input.resumeText, jobDescription: input.jobDescription })}` },
@@ -272,3 +277,4 @@ export async function POST(request: Request) {
   }
   return errorResponse("AI_INVALID_RESPONSE", "AI 返回的结果不完整，请重试。", 502, requestId);
 }
+

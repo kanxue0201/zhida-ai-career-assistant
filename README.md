@@ -26,8 +26,8 @@ Copy-Item .env.example .env.local
 
 ```dotenv
 DEEPSEEK_API_KEY=你的真实DeepSeek密钥
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_BASE_URL=your_base_url_here
+DEEPSEEK_MODEL=your_model_name_here
 
 NEXT_PUBLIC_SUPABASE_URL=https://你的项目ref.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=你的PublishableKey

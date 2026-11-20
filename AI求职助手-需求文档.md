@@ -475,8 +475,8 @@ HTTP 状态码应正确区分客户端输入错误、限流、上游超时和服
 ```dotenv
 # 仅服务端读取，不得添加 NEXT_PUBLIC_ 前缀
 DEEPSEEK_API_KEY=your_api_key
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_BASE_URL=your_base_url_here
+DEEPSEEK_MODEL=your_model_name_here
 ```
 
 要求：
@@ -732,3 +732,4 @@ type AnalysisStatus =
 > 一个无需登录的单页网站；用户在浏览器本地解析一份文本型 PDF 简历，粘贴一个岗位 JD；Next.js 服务端安全调用 DeepSeek；当前页面展示并可复制岗位匹配度分析、简历优化建议、一封求职信及 10 组面试问答；不保存历史，不支持扫描件，不自动改写原 PDF。
 
 该范围已经能验证产品的核心价值：**AI 是否能基于真实简历和目标 JD，生成足够具体、可信、可执行的求职材料优化结果。**
+
