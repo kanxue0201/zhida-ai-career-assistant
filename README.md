@@ -67,7 +67,14 @@
 
 ### 1. 完整分析流程
 
-**上传 PDF 和粘贴 JD → 浏览器提取文字 → Next.js 服务端调用 DeepSeek → Zod 校验 → Supabase 保存 → 页面展示结果**
+```mermaid
+flowchart LR
+    A[上传 PDF 和粘贴 JD] --> B[浏览器本地提取简历文字]
+    B --> C[Next.js 服务端调用 DeepSeek]
+    C --> D[Zod 校验结构化结果]
+    D --> E[Supabase 保存简历与分析记录]
+    D --> F[页面展示四类求职结果]
+```
 
 ### 2. PDF 在浏览器本地解析
 
