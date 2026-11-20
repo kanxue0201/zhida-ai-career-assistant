@@ -68,28 +68,12 @@
 ### 1. 完整分析流程
 
 ```mermaid
-sequenceDiagram
-    actor U as 用户
-    participant B as 浏览器
-    participant N as Next.js 服务端
-    participant D as DeepSeek
-    participant S as Supabase
-
-    U->>B: 上传 PDF 并粘贴 JD
-    B->>B: PDF.js Web Worker 本地提取文字
-    B->>N: 提交简历文字和 JD
-    N->>N: 校验字段、长度和请求频率
-    N->>D: 使用服务端环境变量调用模型
-    D-->>N: 返回结构化 JSON
-    N->>N: Zod 校验四类结果和 10 组问答
-
-    alt 游客模式或不保存历史
-        N-->>B: 仅返回当前页面结果
-    else 登录并开启保存
-        N->>S: 保存简历版本、岗位和分析记录
-        N->>S: 保存每次调用的 Token 用量
-        N-->>B: 返回结果和历史报告 ID
-    end
+flowchart LR
+    A[上传 PDF 和粘贴 JD] --> B[浏览器本地提取简历文字]
+    B --> C[Next.js 服务端调用 DeepSeek]
+    C --> D[Zod 校验结构化结果]
+    D --> E[Supabase 保存简历与分析记录]
+    D --> F[页面展示四类求职结果]
 ```
 
 ### 2. PDF 在浏览器本地解析
@@ -304,3 +288,4 @@ npm run build
 - 暂不支持逐条接受简历建议、面试作答记录和求职信多版本编辑。
 
 原始产品需求见：[AI求职助手-需求文档.md](./AI求职助手-需求文档.md)。
+
