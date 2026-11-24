@@ -3,7 +3,7 @@
 // for both the career analysis and the resume page generation endpoints.
 
 export class UpstreamError extends Error {
-  constructor(public code: string, public httpStatus: number, public retryable = false) {
+  constructor(public code: string, public httpStatus: number, public retryable = false, public detail?: string) {
     super(code);
     this.name = "UpstreamError";
   }
@@ -58,9 +58,11 @@ export async function callDeepSeekJson(
     });
 
     if (!response.ok) {
-      if (response.status === 429) throw new UpstreamError("UPSTREAM_RATE_LIMITED", 429);
-      if (response.status === 401 || response.status === 403) throw new UpstreamError("AI_NOT_CONFIGURED", 503);
-      throw new UpstreamError("UPSTREAM_ERROR", 502, response.status >= 500);
+      const upstreamBody = await response.text().catch(() => "");
+      const detail = `upstream ${response.status}: ${upstreamBody.slice(0, 200)}`;
+      if (response.status === 429) throw new UpstreamError("UPSTREAM_RATE_LIMITED", 429, false, detail);
+      if (response.status === 401 || response.status === 403) throw new UpstreamError("AI_NOT_CONFIGURED", 503, false, detail);
+      throw new UpstreamError("UPSTREAM_ERROR", 502, response.status >= 500, detail);
     }
 
     const payload = await response.json() as {
