@@ -9,7 +9,7 @@ export function ClearHistoryButton({ disabled }: { disabled: boolean }) {
   const router = useRouter();
 
   async function clear() {
-    if (!window.confirm("确定清空全部保存数据吗？这将删除所有历史报告、岗位和简历文字记录，且无法撤销。")) return;
+    if (!window.confirm("确定清空全部保存数据吗？这将删除所有历史报告、岗位、简历文字记录和在线简历页（已发布的公开链接会立即失效），且无法撤销。")) return;
     setLoading(true);
     const response = await fetch("/api/history", { method: "DELETE" });
     if (response.ok) router.refresh();

@@ -6,6 +6,10 @@ export const runtime = "nodejs";
 export async function DELETE() {
   try {
     const { supabase, userId } = await requireUser();
+    // "Clear all saved data" includes online resume pages: published pages hold
+    // personal data and must not survive the wipe.
+    const { error: pagesError } = await supabase.from("resume_pages").delete().eq("user_id", userId);
+    if (pagesError) throw new ApiError(500, `简历页删除失败：${pagesError.message}`);
     const { error: analysisError } = await supabase.from("analysis_runs").delete().eq("user_id", userId);
     if (analysisError) throw new ApiError(500, `分析记录删除失败：${analysisError.message}`);
     const { error: jobsError } = await supabase.from("job_posts").delete().eq("user_id", userId);

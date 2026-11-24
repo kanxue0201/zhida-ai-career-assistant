@@ -1,6 +1,6 @@
 import http from "node:http";
 
-const result = {
+const analysisResult = {
   matchAnalysis: {
     score: 82,
     level: "较高",
@@ -30,6 +30,45 @@ const result = {
   }))
 };
 
+const pageContent = {
+  profile: {
+    name: "张三",
+    headline: "3 年经验的 React 前端工程师",
+    tagline: "专注 B 端产品的前端工程师，擅长 React 与 TypeScript 工程实践。曾在客户仪表盘项目中协同产品与后端团队推进需求落地，重视清晰沟通与可靠交付。",
+    location: "上海",
+    yearsLabel: "3 年经验",
+  },
+  highlights: [
+    { title: "核心技术栈扎实", description: "三年 React、TypeScript 与 Next.js 实践，覆盖客户仪表盘等真实 B 端项目。" },
+    { title: "跨职能协作经验", description: "与产品设计师和后端工程师持续协作，在理解业务需求的基础上推进技术实现。" },
+    { title: "关注加载体验", description: "参与页面加载体验优化，重视性能与交付质量（具体指标请补充真实数据）。" },
+  ],
+  about: "三年前端开发经历，主要面向 B 端产品。习惯从业务需求出发组织技术方案，在客户仪表盘项目中负责页面开发与加载体验优化，并与产品设计和后端团队保持紧密协作。",
+  skills: [
+    { category: "前端核心", items: ["React", "TypeScript", "Next.js"] },
+    { category: "工程协作", items: ["跨团队沟通", "需求拆解", "代码评审"] },
+  ],
+  projects: [
+    {
+      name: "客户仪表盘",
+      role: "前端开发",
+      period: "2024—2025",
+      summary: "面向企业客户的 B 端数据仪表盘，使用 React 与 TypeScript 开发页面并优化加载体验。",
+      achievements: ["参与页面开发与加载体验优化", "协同产品设计和后端工程师推进需求落地"],
+      tags: ["React", "TypeScript", "B 端"],
+    },
+  ],
+  experience: [
+    { company: "某科技公司", title: "前端工程师", period: "2022—至今", summary: "负责 B 端产品前端开发，参与客户仪表盘等项目。" },
+  ],
+  education: [
+    { school: "某大学", degree: "计算机科学与技术 · 本科", period: "2018—2022" },
+  ],
+  contacts: { email: "zhangsan@example.com" },
+  cta: { label: "联系我", type: "email", value: "zhangsan@example.com" },
+  settings: { sections: { about: true, highlights: true, skills: true, projects: true, experience: true, education: true, contacts: true } },
+};
+
 const server = http.createServer((request, response) => {
   if (request.method !== "POST" || request.url !== "/chat/completions") {
     response.writeHead(404).end(); return;
@@ -41,6 +80,8 @@ const server = http.createServer((request, response) => {
     if (request.headers.authorization !== "Bearer test-key" || !payload.response_format) {
       response.writeHead(400).end(JSON.stringify({ error: "invalid test request" })); return;
     }
+    const systemPrompt = payload.messages?.find((message) => message.role === "system")?.content || "";
+    const result = systemPrompt.includes("resume-page-1") ? pageContent : analysisResult;
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({ choices: [{ finish_reason: "stop", message: { content: JSON.stringify(result) } }] }));
   });

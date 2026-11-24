@@ -4,9 +4,9 @@ import {
   ANALYSIS_DISCLAIMER,
   analysisInputSchema,
   analysisSchema,
-  type AnalysisInput,
 } from "@/lib/analysis-schema";
 import { ApiError, requireUser } from "@/lib/api-auth";
+import { callDeepSeekJson, createRateLimiter, modelName, readJsonBody, UpstreamError } from "@/lib/deepseek";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -57,98 +57,7 @@ JSON 结构必须为：
   }]
 }`;
 
-class UpstreamError extends Error {
-  constructor(public code: string, public httpStatus: number, public retryable = false) {
-    super(code);
-    this.name = "UpstreamError";
-  }
-}
-
-type Usage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-
-function requiredPositiveInteger(value: string | undefined) {
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw new UpstreamError("AI_NOT_CONFIGURED", 503);
-  return parsed;
-}
-
-function modelName() {
-  return process.env.DEEPSEEK_MODEL?.trim() || "missing-model";
-}
-
-async function callDeepSeek(input: AnalysisInput): Promise<{ candidate: unknown; usage?: Usage }> {
-  const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
-  const baseUrlValue = process.env.DEEPSEEK_BASE_URL?.trim();
-  const model = modelName();
-  if (!apiKey || apiKey === "your_api_key_here" || !baseUrlValue || model === "missing-model") {
-    throw new UpstreamError("AI_NOT_CONFIGURED", 503);
-  }
-
-  const baseUrl = baseUrlValue.replace(/\/$/, "");
-  const timeoutMs = requiredPositiveInteger(process.env.DEEPSEEK_TIMEOUT_MS);
-  const maxTokens = requiredPositiveInteger(process.env.DEEPSEEK_MAX_TOKENS);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `请分析以下数据并严格按约定 JSON 输出。\n\n${JSON.stringify({ resumeText: input.resumeText, jobDescription: input.jobDescription })}` },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.4,
-        max_tokens: maxTokens,
-        stream: false,
-      }),
-      signal: controller.signal,
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) throw new UpstreamError("UPSTREAM_RATE_LIMITED", 429);
-      if (response.status === 401 || response.status === 403) throw new UpstreamError("AI_NOT_CONFIGURED", 503);
-      throw new UpstreamError("UPSTREAM_ERROR", 502, response.status >= 500);
-    }
-
-    const payload = await response.json() as {
-      choices?: Array<{ finish_reason?: string; message?: { content?: string } }>;
-      usage?: Usage;
-    };
-    const choice = payload.choices?.[0];
-    if (choice?.finish_reason === "length") throw new UpstreamError("AI_INCOMPLETE_RESPONSE", 502);
-    const content = choice?.message?.content?.trim();
-    if (!content) throw new UpstreamError("AI_INVALID_RESPONSE", 502, true);
-    return { candidate: JSON.parse(content) as unknown, usage: payload.usage };
-  } catch (error) {
-    if (error instanceof UpstreamError || error instanceof SyntaxError) throw error;
-    if (error instanceof Error && error.name === "AbortError") throw new UpstreamError("UPSTREAM_TIMEOUT", 504);
-    throw new UpstreamError("UPSTREAM_ERROR", 502, true);
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-const requestsByClient = new Map<string, { count: number; resetAt: number }>();
-const RATE_WINDOW_MS = 10 * 60 * 1000;
-const RATE_LIMIT = 8;
-
-function isRateLimited(request: Request) {
-  const client = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  const now = Date.now();
-  const current = requestsByClient.get(client);
-  if (!current || current.resetAt <= now) {
-    if (requestsByClient.size > 1_000) requestsByClient.clear();
-    requestsByClient.set(client, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  current.count += 1;
-  return current.count > RATE_LIMIT;
-}
+const isRateLimited = createRateLimiter({ windowMs: 10 * 60 * 1000, limit: 8 });
 
 function errorResponse(code: string, message: string, status: number, requestId: string) {
   return NextResponse.json(
@@ -161,15 +70,13 @@ export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
   if (isRateLimited(request)) return errorResponse("REQUEST_RATE_LIMITED", "分析请求较频繁，请 10 分钟后再试。", 429, requestId);
 
-  const contentLength = Number(request.headers.get("content-length") || 0);
-  if (contentLength > 250_000) return errorResponse("INPUT_TOO_LONG", "请求内容过大，请精简简历或岗位描述。", 413, requestId);
-
   let rawBody: unknown;
   try {
-    const bodyText = await request.text();
-    if (new TextEncoder().encode(bodyText).byteLength > 250_000) return errorResponse("INPUT_TOO_LONG", "请求内容过大，请精简简历或岗位描述。", 413, requestId);
-    rawBody = JSON.parse(bodyText);
-  } catch {
+    rawBody = await readJsonBody(request, 250_000);
+  } catch (error) {
+    if (error instanceof UpstreamError && error.code === "INPUT_TOO_LONG") {
+      return errorResponse("INPUT_TOO_LONG", "请求内容过大，请精简简历或岗位描述。", 413, requestId);
+    }
     return errorResponse("INVALID_INPUT", "请求格式不正确，请刷新页面后重试。", 400, requestId);
   }
 
@@ -218,10 +125,12 @@ export async function POST(request: Request) {
     }).eq("id", analysisRunId);
   }
 
+  const userContent = `请分析以下数据并严格按约定 JSON 输出。\n\n${JSON.stringify({ resumeText: parsedInput.data.resumeText, jobDescription: parsedInput.data.jobDescription })}`;
+
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const { candidate, usage } = await callDeepSeek(parsedInput.data);
+      const { candidate, usage } = await callDeepSeekJson(SYSTEM_PROMPT, userContent);
       if (persistence && analysisRunId) {
         await persistence.supabase.from("ai_usage_logs").insert({
           user_id: persistence.userId,
@@ -277,4 +186,3 @@ export async function POST(request: Request) {
   }
   return errorResponse("AI_INVALID_RESPONSE", "AI 返回的结果不完整，请重试。", 502, requestId);
 }
-

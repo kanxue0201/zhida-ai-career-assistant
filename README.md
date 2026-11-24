@@ -1,6 +1,6 @@
 # 职达 AI · 求职助手
 
-> 上传一份简历，粘贴一个目标岗位，让 AI 帮你完成岗位匹配分析、简历优化、定向求职信和面试准备。
+> 上传一份简历，粘贴一个目标岗位，让 AI 帮你完成岗位匹配分析、简历优化、定向求职信和面试准备；2.0 新增在线简历页生成器，把经历变成可编辑、可换主题、可公开分享的个人求职主页。
 
 ## 在线网站
 
@@ -28,6 +28,17 @@
   4. 10 个面试问题、考察意图、参考回答和准备提示；
 - 分项复制或复制完整报告；
 - 桌面端与移动端响应式界面。
+
+### 在线简历页（2.0）
+
+- 上传 PDF 或从历史分析选择简历，AI 结构化生成个人求职主页（定位、优势、项目、技能、联系方式、行动按钮）；
+- AI 只输出结构化内容 JSON（Zod 校验），页面由站内组件渲染，不生成 HTML；
+- 编辑器：分区表单 + 实时预览，条目增删排序、分区显隐；
+- 4 个主题即点即换：清爽专业 / 产品主页风 / 创意作品集风 / 企业科技风；
+- 发布获得公开链接 `/u/<slug>`，任何人无需登录即可访问；撤回/删除立即失效（动态渲染，无 CDN 缓存）；
+- 游客可完整生成、编辑、预览（草稿存浏览器 localStorage）；仅发布/云端保存需登录，登录一次后草稿自动交接恢复；
+- 登录用户草稿自动云保存（防抖 2 秒），每账户最多 10 个页面；
+- 发布前弹窗确认将公开的联系方式；「清空保存数据」会级联删除全部简历页。
 
 ### 游客模式
 
@@ -142,8 +153,9 @@ flowchart LR
 | `job_posts` | 目标岗位名称、公司和完整 JD |
 | `analysis_runs` | 分析状态、匹配分、完整 JSONB 报告、模型和 Prompt 版本 |
 | `ai_usage_logs` | 每次 AI 调用的 Token 用量，不保存 Prompt、简历或 JD 正文 |
+| `resume_pages` | 在线简历页：slug、状态、主题、JSONB 内容快照；所有者全量管理，anon 仅可读已发布行 |
 
-所有表均包含用户关联字段、时间戳、必要索引和 RLS 策略。
+所有表均包含用户关联字段、时间戳、必要索引和 RLS 策略。2.0 迁移文件：[supabase/migrations/20261124103000_resume_pages.sql](./supabase/migrations/20261124103000_resume_pages.sql)。
 
 ---
 
@@ -246,19 +258,28 @@ app/
   api/analyze/             # DeepSeek 调用、结果校验、分析与用量持久化
   api/resumes/             # 简历文字和版本保存，不上传 PDF
   api/jobs/                # JD 保存
-  api/history/             # 全部保存数据删除
+  api/history/             # 全部保存数据删除（含简历页级联删除）
   api/history/[id]/        # 单条报告删除
+  api/pages/               # 简历页创建；generate 生成、sources 历史来源、slug-check
+  api/pages/[id]/          # 简历页自动保存/删除；publish / unpublish
   auth/confirm/            # Supabase 邮箱验证回调
-  history/                 # 历史报告列表与详情
+  history/                 # 历史报告列表与详情（含生成简历页入口）
   login/                   # 邮箱登录和注册
+  pages/                   # 简历页列表、new 创建向导、draft 游客草稿、[id]/edit 编辑器
+  u/[slug]/                # 公开简历页，SSR 动态渲染，无需登录
 components/
   career-assistant.tsx     # 游客/登录双模式主流程
   results.tsx              # 四类 AI 结果展示
   auth-form.tsx            # Auth 表单
   history-list.tsx         # 历史列表
+  pages/                   # 编辑器、创建向导、列表、游客草稿交接
+  resume-page/             # 公开页渲染组件 + 4 主题 CSS
 lib/
   supabase/                # Browser/Server Supabase 客户端
   analysis-schema.ts       # AI 输入输出 Zod 契约
+  page-schema.ts           # 简历页内容契约、主题、slug 规则
+  page-draft.ts            # 游客本地草稿（localStorage，24h 过期）
+  deepseek.ts              # 共享 DeepSeek 客户端、限流、错误归一化
   pdf.ts                   # 浏览器端 PDF 提取
 proxy.ts                   # Supabase 会话刷新
 public/
@@ -285,7 +306,9 @@ npm run build
 - 当前不创建 Supabase Storage，`resume_versions.storage_path` 仅为未来扩展预留；
 - “清空保存数据”不删除 Supabase Auth 账户本身；
 - 内存限流适合作为基础保护，多实例生产环境应使用平台或独立限流服务；
-- 暂不支持逐条接受简历建议、面试作答记录和求职信多版本编辑。
+- 暂不支持逐条接受简历建议、面试作答记录和求职信多版本编辑；
+- 简历页 MVP 暂不支持：头像/项目配图、访问统计、slug 修改重定向、自定义域名、页面密码保护、导出 PDF；
+- 简历页编辑为 last-write-wins，双开标签页同时编辑同一页时后保存的覆盖先保存的。
 
 原始产品需求见：[AI求职助手-需求文档.md](./AI求职助手-需求文档.md)。
 

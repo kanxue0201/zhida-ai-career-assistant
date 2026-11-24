@@ -28,7 +28,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Exclude ALL /_next/* internals (static, image, and the dev HMR WebSocket
+  // endpoint): intercepting /_next/hmr breaks the upgrade handshake and stalls
+  // Turbopack dev hydration.
   matcher: [
-    "/((?!_next/static|_next/image|icon.svg|pdf.worker.min.mjs|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/|icon.svg|pdf.worker.min.mjs|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
