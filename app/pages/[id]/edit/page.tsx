@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeft, Home } from "lucide-react";
 import { PageEditor } from "@/components/pages/page-editor";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { pageContentSchema, PAGE_THEMES, type PageTheme } from "@/lib/page-schema";
@@ -26,6 +28,10 @@ export default async function PageEditPage({ params, searchParams }: {
       <main className="pages-main" style={{ paddingTop: 80 }}>
         <h1>页面内容格式不兼容</h1>
         <p>这份草稿的内容版本无法在当前编辑器中打开，请返回「在线简历页」列表删除后重新生成。</p>
+        <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+          <Link href="/pages" className="editor-button ghost"><ArrowLeft size={14} /> 返回简历页列表</Link>
+          <Link href="/" className="editor-button ghost"><Home size={14} /> 返回首页</Link>
+        </div>
       </main>
     );
   }

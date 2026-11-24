@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Check, CheckCircle2, ChevronDown, CircleAlert, Copy, Eye,
-  Globe, LoaderCircle, PencilLine, Plus, RefreshCw, Rocket, Trash2, Undo2, X,
+  Globe, Home, LoaderCircle, PencilLine, Plus, RefreshCw, Rocket, Trash2, Undo2, X,
 } from "lucide-react";
 import { ResumePageView } from "@/components/resume-page/page-view";
 import {
@@ -313,6 +313,7 @@ export function PageEditor({ initial, isLoggedIn, autoOpenPublish = false }: { i
       <div className="editor-topbar">
         <div className="editor-topbar-row">
           <Link href={isLoggedIn ? "/pages" : "/"} className="editor-back"><ArrowLeft size={15} /> {isLoggedIn ? "我的简历页" : "首页"}</Link>
+          {isLoggedIn && <Link href="/" className="editor-back" aria-label="返回首页" title="返回首页"><Home size={15} /></Link>}
           <input className="editor-title-input" value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} aria-label="页面管理名称" />
           <span className={`editor-save-state is-${saveState}`}>
             {saveState === "saving" && <><LoaderCircle size={13} className="spin" /> 保存中</>}

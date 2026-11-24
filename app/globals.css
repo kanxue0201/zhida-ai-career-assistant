@@ -466,3 +466,10 @@ a { color: inherit; text-decoration: none; }
 .clear-history-button { display: flex; align-items: center; gap: 6px; border: 1px solid #dfd9d4; background: transparent; color: #9a7e70; border-radius: 9px; padding: 10px 13px; font-size: 11px; }
 .clear-history-button:disabled { opacity: .4; }
 @media (max-width: 760px) { .history-heading-actions { flex-direction: column-reverse; align-items: stretch; } .clear-history-button { justify-content: center; } }
+
+/* ---------- 404 ---------- */
+.not-found-shell { display: grid; place-items: center; }
+.not-found-main { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 60px 24px; }
+.not-found-code { font-size: 64px; font-weight: 800; letter-spacing: -2px; color: var(--green-dark); line-height: 1; margin-top: 18px; }
+.not-found-main h1 { margin: 0; font-size: 21px; }
+.not-found-main p { margin: 0 0 8px; color: #86938a; font-size: 13px; }

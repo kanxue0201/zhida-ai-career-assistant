@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
+import { ArrowLeft, CircleAlert, LoaderCircle, RefreshCw } from "lucide-react";
 import { PageEditor } from "@/components/pages/page-editor";
 import { clearLocalDraft, loadLocalDraft, type LocalPageDraft } from "@/lib/page-draft";
 
@@ -82,12 +83,14 @@ export function GuestDraftGate({ isLoggedIn }: { isLoggedIn: boolean }) {
           <p>{error}</p>
           <p className="draft-gate-note">你的草稿仍保留在本浏览器中，重试不会丢失内容。</p>
           <button type="button" className="editor-button primary" onClick={() => draft && void restore(draft)}><RefreshCw size={14} /> 重试云端保存</button>
+          <Link href="/" className="editor-back"><ArrowLeft size={14} /> 返回首页</Link>
         </div>
       ) : (
         <div className="draft-gate-card">
           <LoaderCircle size={26} className="spin" />
           <h1>{phase === "restoring" ? "正在把草稿保存到你的账户…" : "正在读取本地草稿…"}</h1>
           <p>马上就好，请不要关闭页面。</p>
+          <Link href="/" className="editor-back"><ArrowLeft size={14} /> 返回首页</Link>
         </div>
       )}
     </main>
