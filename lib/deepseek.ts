@@ -76,8 +76,10 @@ export async function callDeepSeekJson(
     return { candidate: JSON.parse(content) as unknown, usage: payload.usage };
   } catch (error) {
     if (error instanceof UpstreamError || error instanceof SyntaxError) throw error;
-    if (error instanceof Error && error.name === "AbortError") throw new UpstreamError("UPSTREAM_TIMEOUT", 504);
-    throw new UpstreamError("UPSTREAM_ERROR", 502, true);
+    if (error instanceof Error && error.name === "AbortError") throw new UpstreamError("UPSTREAM_TIMEOUT", 504, false, "client abort/timeout");
+    const cause = (error as { cause?: unknown }).cause;
+    const netDetail = error instanceof Error ? `${error.name}: ${error.message}${cause ? ` | cause: ${String(cause)}` : ""}` : String(error);
+    throw new UpstreamError("UPSTREAM_ERROR", 502, true, `network: ${netDetail}`.slice(0, 240));
   } finally {
     clearTimeout(timeout);
   }
