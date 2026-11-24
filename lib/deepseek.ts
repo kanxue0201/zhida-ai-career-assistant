@@ -11,10 +11,9 @@ export class UpstreamError extends Error {
 
 export type DeepSeekUsage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 
-function requiredPositiveInteger(value: string | undefined) {
+function positiveIntegerOrDefault(value: string | undefined, fallback: number) {
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) throw new UpstreamError("AI_NOT_CONFIGURED", 503);
-  return parsed;
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 export function modelName() {
@@ -34,8 +33,8 @@ export async function callDeepSeekJson(
   }
 
   const baseUrl = baseUrlValue.replace(/\/$/, "");
-  const timeoutMs = requiredPositiveInteger(process.env.DEEPSEEK_TIMEOUT_MS);
-  const maxTokens = requiredPositiveInteger(process.env.DEEPSEEK_MAX_TOKENS);
+  const timeoutMs = positiveIntegerOrDefault(process.env.DEEPSEEK_TIMEOUT_MS, 90_000);
+  const maxTokens = positiveIntegerOrDefault(process.env.DEEPSEEK_MAX_TOKENS, 8_000);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
