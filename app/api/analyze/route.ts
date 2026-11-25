@@ -182,7 +182,7 @@ export async function POST(request: Request) {
       AI_INVALID_RESPONSE: "AI 返回了无法识别的结果，请重试。",
       UPSTREAM_ERROR: "AI 服务暂时异常，你的输入已保留，请稍后重试。",
     };
-    return errorResponse(lastError.code, (messages[lastError.code] || "分析失败，请稍后重试。") + (lastError.detail ? ` [${lastError.detail}]` : ""), lastError.httpStatus, requestId);
+    return errorResponse(lastError.code, messages[lastError.code] || "分析失败，请稍后重试。", lastError.httpStatus, requestId);
   }
   return errorResponse("AI_INVALID_RESPONSE", "AI 返回的结果不完整，请重试。", 502, requestId);
 }

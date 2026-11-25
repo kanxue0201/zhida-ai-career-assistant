@@ -3,7 +3,7 @@
 // for both the career analysis and the resume page generation endpoints.
 
 export class UpstreamError extends Error {
-  constructor(public code: string, public httpStatus: number, public retryable = false, public detail?: string) {
+  constructor(public code: string, public httpStatus: number, public retryable = false) {
     super(code);
     this.name = "UpstreamError";
   }
@@ -58,11 +58,9 @@ export async function callDeepSeekJson(
     });
 
     if (!response.ok) {
-      const upstreamBody = await response.text().catch(() => "");
-      const detail = `upstream ${response.status}: ${upstreamBody.slice(0, 200)}`;
-      if (response.status === 429) throw new UpstreamError("UPSTREAM_RATE_LIMITED", 429, false, detail);
-      if (response.status === 401 || response.status === 403) throw new UpstreamError("AI_NOT_CONFIGURED", 503, false, detail);
-      throw new UpstreamError("UPSTREAM_ERROR", 502, response.status >= 500, detail);
+      if (response.status === 429) throw new UpstreamError("UPSTREAM_RATE_LIMITED", 429);
+      if (response.status === 401 || response.status === 403) throw new UpstreamError("AI_NOT_CONFIGURED", 503);
+      throw new UpstreamError("UPSTREAM_ERROR", 502, response.status >= 500);
     }
 
     const payload = await response.json() as {
@@ -76,10 +74,8 @@ export async function callDeepSeekJson(
     return { candidate: JSON.parse(content) as unknown, usage: payload.usage };
   } catch (error) {
     if (error instanceof UpstreamError || error instanceof SyntaxError) throw error;
-    if (error instanceof Error && error.name === "AbortError") throw new UpstreamError("UPSTREAM_TIMEOUT", 504, false, "client abort/timeout");
-    const cause = (error as { cause?: unknown }).cause;
-    const netDetail = error instanceof Error ? `${error.name}: ${error.message}${cause ? ` | cause: ${String(cause)}` : ""}` : String(error);
-    throw new UpstreamError("UPSTREAM_ERROR", 502, true, `network: ${netDetail}`.slice(0, 240));
+    if (error instanceof Error && error.name === "AbortError") throw new UpstreamError("UPSTREAM_TIMEOUT", 504);
+    throw new UpstreamError("UPSTREAM_ERROR", 502, true);
   } finally {
     clearTimeout(timeout);
   }

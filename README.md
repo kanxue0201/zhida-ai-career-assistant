@@ -4,11 +4,11 @@
 
 ## 在线网站
 
-**[立即体验职达 AI](https://zhida-ai-career-assistant.netlify.app)**
+**[立即体验职达 AI](https://zhida-ai-career-assistant.vercel.app)**（以 Vercel 实际分配的域名为准）
 
 | 服务 | 用途 |
 | --- | --- |
-| **Netlify** | 网站托管、Next.js Runtime、服务端函数、GitHub 持续部署 |
+| **Vercel** | 网站托管、Next.js 原生运行时、Serverless 函数、GitHub 持续部署 |
 | **Supabase** | 邮箱登录、用户资料、PostgreSQL 数据库、RLS 数据隔离 |
 | **DeepSeek** | 岗位分析、简历建议、求职信和面试问答生成 |
 | **PDF.js** | 在浏览器本地提取 PDF 简历文字，不上传原 PDF |
@@ -70,7 +70,7 @@
 | AI 输出校验 | Zod + 自定义 JSON 结果契约 |
 | 身份认证 | Supabase Auth + `@supabase/ssr` |
 | 数据库 | Supabase PostgreSQL + Row Level Security |
-| 部署 | Netlify Next.js Runtime + GitHub Continuous Deployment |
+| 部署 | Vercel（Next.js 原生）+ GitHub Continuous Deployment |
 
 ---
 
@@ -129,15 +129,13 @@ flowchart LR
 - 保存模型名、Prompt 版本和结果 Schema 版本，方便追踪兼容性问题；
 - 将来需要逐条接受建议、面试作答或求职信多版本编辑时，再拆分子表。
 
-### 6. Netlify 部署方式
+### 6. Vercel 部署方式
 
 - GitHub `main` 分支推送后自动触发生产部署；
-- Netlify 自动识别 Next.js 并安装 Next.js Runtime；
-- SSR、Route Handlers 和 Proxy 由 Runtime 转换为 Netlify Functions / Edge Functions；
-- 构建命令为 `npm run build`，发布目录为 `.next`；
-- DeepSeek Secret 仅保存在 Netlify 环境变量中；
-- 公开的 URL、模型参数和 Supabase Publishable Key 不作为 Secret 处理；
-- 不设置扫描排除项，保留 Netlify 对真实秘密值的扫描保护。
+- Vercel 原生识别 Next.js，无需 Runtime 插件或额外配置文件；
+- SSR 和 Route Handlers 作为 Serverless Functions 运行，AI 接口声明 `maxDuration = 120`；
+- DeepSeek Secret 仅保存在 Vercel 环境变量中；
+- 公开的 URL、模型参数和 Supabase Publishable Key 不作为 Secret 处理。
 
 ---
 
@@ -216,35 +214,24 @@ npm run dev
 
 ---
 
-## 部署到 Netlify
+## 部署到 Vercel
 
-1. 将 GitHub 仓库连接到 Netlify；
-2. 确认构建设置：
+1. 在 Vercel 选择 **Add New → Project → Import Git Repository**，导入本仓库；
+2. Framework Preset 自动识别为 **Next.js**，其余构建设置保持默认（Production branch 为 `main`，Node.js 22+）；
+3. 在 **Settings → Environment Variables** 中配置 `.env.example` 列出的变量（环境选 Production / Preview / Development 全部）；
+4. 部署完成后，将 Vercel 分配的域名加入 Supabase Auth 配置。
 
-| 配置 | 值 |
-| --- | --- |
-| Runtime | Next.js（自动识别） |
-| Build command | `npm run build` |
-| Publish directory | `.next` |
-| Production branch | `main` |
-| Node.js | 24 |
-
-3. 在 **Project configuration → Environment variables** 中配置 `.env.example` 列出的变量；
-4. 只将真正的 `DEEPSEEK_API_KEY` 标记为 Secret；
-5. 执行 **Deploys → Trigger deploy → Deploy site**；
-6. 将线上地址加入 Supabase Auth 配置。
-
-当前生产环境回调为：
+生产环境回调（域名以 Vercel 实际分配为准）：
 
 ```text
-https://zhida-ai-career-assistant.netlify.app/auth/confirm
-https://zhida-ai-career-assistant.netlify.app/**
+https://zhida-ai-career-assistant.vercel.app/auth/confirm
+https://zhida-ai-career-assistant.vercel.app/**
 ```
 
 Supabase Site URL 为：
 
 ```text
-https://zhida-ai-career-assistant.netlify.app
+https://zhida-ai-career-assistant.vercel.app
 ```
 
 修改环境变量后需要重新部署，尤其是构建时注入前端的 `NEXT_PUBLIC_` 变量。
