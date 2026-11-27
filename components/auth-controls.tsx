@@ -47,8 +47,16 @@ function InfoDialog({ type, onClose }: { type: InfoType; onClose: () => void }) 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    // Lock scrolling without letting the disappearing scrollbar resize the page.
+    if (scrollbarWidth > 0) {
+      const bodyPaddingRight = Number.parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
+      document.body.style.paddingRight = `${bodyPaddingRight + scrollbarWidth}px`;
+    }
     document.body.style.overflow = "hidden";
-    acknowledgeRef.current?.focus();
+    acknowledgeRef.current?.focus({ preventScroll: true });
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -76,8 +84,9 @@ function InfoDialog({ type, onClose }: { type: InfoType; onClose: () => void }) 
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
       document.removeEventListener("keydown", onKeyDown);
-      previousFocus?.focus();
+      previousFocus?.focus({ preventScroll: true });
     };
   }, [onClose]);
 
