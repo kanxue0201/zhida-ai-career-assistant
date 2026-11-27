@@ -4,11 +4,11 @@
 
 ## 在线网站
 
-**[立即体验职达 AI](https://zhida-ai-career-assistant.vercel.app)**（以 Vercel 实际分配的域名为准）
+网站通过 **Cloudflare Workers** 部署，线上域名以 Cloudflare 实际配置为准。
 
 | 服务 | 用途 |
 | --- | --- |
-| **Vercel** | 网站托管、Next.js 原生运行时、Serverless 函数、GitHub 持续部署 |
+| **Cloudflare Workers** | 网站托管、Next.js 服务端渲染、Route Handlers 与静态资源分发 |
 | **Supabase** | 邮箱登录、用户资料、PostgreSQL 数据库、RLS 数据隔离 |
 | **DeepSeek** | 岗位分析、简历建议、求职信和面试问答生成 |
 | **PDF.js** | 在浏览器本地提取 PDF 简历文字，不上传原 PDF |
@@ -71,7 +71,7 @@
 | AI 输出校验 | Zod + 自定义 JSON 结果契约 |
 | 身份认证 | Supabase Auth + `@supabase/ssr` |
 | 数据库 | Supabase PostgreSQL + Row Level Security |
-| 部署 | Vercel（Next.js 原生）+ GitHub Continuous Deployment |
+| 部署 | Cloudflare Workers + OpenNext + Wrangler |
 
 ---
 
@@ -130,13 +130,14 @@ flowchart LR
 - 保存模型名、Prompt 版本和结果 Schema 版本，方便追踪兼容性问题；
 - 将来需要逐条接受建议、面试作答或求职信多版本编辑时，再拆分子表。
 
-### 6. Vercel 部署方式
+### 6. Cloudflare Workers 部署方式
 
-- GitHub `main` 分支推送后自动触发生产部署；
-- Vercel 原生识别 Next.js，无需 Runtime 插件或额外配置文件；
-- SSR 和 Route Handlers 作为 Serverless Functions 运行，AI 接口声明 `maxDuration = 120`；
-- DeepSeek Secret 仅保存在 Vercel 环境变量中；
-- 公开的 URL、模型参数和 Supabase Publishable Key 不作为 Secret 处理。
+- `@opennextjs/cloudflare` 将 Next.js 应用构建为 Cloudflare Worker；
+- `wrangler.jsonc` 配置 Worker 入口、静态资源目录和兼容性标志；
+- 页面 SSR 与 Route Handlers 在 Workers 中运行，静态资源由 Workers Assets 提供；
+- 项目全部页面与 API 采用动态渲染，不依赖 ISR，因此未配置 R2/KV 增量缓存；
+- DeepSeek 密钥保存在 Cloudflare 环境变量或 Secret 中，不写入仓库；
+- `NEXT_PUBLIC_` 变量在构建时注入前端，修改后需要重新构建并部署。
 
 ---
 
@@ -215,24 +216,37 @@ npm run dev
 
 ---
 
-## 部署到 Vercel
+## 部署到 Cloudflare Workers
 
-1. 在 Vercel 选择 **Add New → Project → Import Git Repository**，导入本仓库；
-2. Framework Preset 自动识别为 **Next.js**，其余构建设置保持默认（Production branch 为 `main`，Node.js 22+）；
-3. 在 **Settings → Environment Variables** 中配置 `.env.example` 列出的变量（环境选 Production / Preview / Development 全部）；
-4. 部署完成后，将 Vercel 分配的域名加入 Supabase Auth 配置。
+1. 安装依赖并登录 Cloudflare：
 
-生产环境回调（域名以 Vercel 实际分配为准）：
+   ```bash
+   npm install
+   npx wrangler login
+   ```
+
+2. 按 `.env.example` 配置环境变量。DeepSeek 配置应保存在 Cloudflare Worker 的变量或 Secret 中；`NEXT_PUBLIC_` 变量会在构建时注入，本地构建前也需正确配置；
+3. 通过 OpenNext 构建并部署：
+
+   ```bash
+   npm run deploy
+   ```
+
+   该命令会依次执行 `opennextjs-cloudflare build` 和 `opennextjs-cloudflare deploy`。本地预览 Cloudflare 版本可运行 `npm run preview`。
+
+4. 部署完成后，将 Workers 域名或自定义域名加入 Supabase Auth 配置。
+
+生产环境回调（替换为实际线上域名）：
 
 ```text
-https://zhida-ai-career-assistant.vercel.app/auth/confirm
-https://zhida-ai-career-assistant.vercel.app/**
+https://your-domain.example/auth/confirm
+https://your-domain.example/**
 ```
 
 Supabase Site URL 为：
 
 ```text
-https://zhida-ai-career-assistant.vercel.app
+https://your-domain.example
 ```
 
 修改环境变量后需要重新部署，尤其是构建时注入前端的 `NEXT_PUBLIC_` 变量。
@@ -272,6 +286,8 @@ lib/
   deepseek.ts              # 共享 DeepSeek 客户端、限流、错误归一化
   pdf.ts                   # 浏览器端 PDF 提取
 proxy.ts                   # Supabase 会话刷新
+open-next.config.ts        # OpenNext Cloudflare 适配配置
+wrangler.jsonc             # Cloudflare Worker、静态资源与兼容性配置
 public/
   pdf.worker.min.mjs       # PDF.js Worker
 supabase/migrations/       # 数据库、索引与 RLS 迁移
