@@ -60,7 +60,30 @@ export function ComboField({ label, value, onChange, options, maxLength = 40, op
 }
 
 export function ExperienceField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return <ComboField label="经验标签" value={value} onChange={onChange} options={EXPERIENCE_OPTIONS} optional placeholder="选择或自定义，如：本科在读" />;
+  const [custom, setCustom] = useState(false);
+  const hasCustomValue = Boolean(value && !EXPERIENCE_OPTIONS.includes(value));
+
+  if (custom) {
+    return <div className="ed-field"><FieldLabel label="经验标签" optional />
+      <input aria-label="自定义经验标签" value={value} maxLength={40} placeholder="输入自定义经验标签" onChange={(event) => onChange(event.target.value)} />
+      <button type="button" className="ed-field-action" onClick={() => setCustom(false)}>返回下拉选择</button>
+    </div>;
+  }
+
+  return <label className="ed-field"><FieldLabel label="经验标签" optional />
+    <select aria-label="经验标签" value={value} onChange={(event) => {
+      if (event.target.value === "__custom") {
+        setCustom(true);
+        return;
+      }
+      onChange(event.target.value);
+    }}>
+      <option value="">选择经验标签</option>
+      {hasCustomValue && <option value={value}>{value}</option>}
+      {EXPERIENCE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+      <option value="__custom">自定义</option>
+    </select>
+  </label>;
 }
 
 export function SkillCategoryField({ value, onChange }: { value: string; onChange: (value: string) => void }) {

@@ -1,13 +1,20 @@
 import { z } from "zod";
 
-export const PAGE_THEMES = ["clean-pro", "product-launch", "creative-portfolio", "enterprise-tech"] as const;
+export const PAGE_THEMES = [
+  "clean-pro", "product-launch", "creative-portfolio", "enterprise-tech",
+  "editorial-story", "career-timeline", "minimal-swiss", "developer-docs",
+] as const;
 export type PageTheme = (typeof PAGE_THEMES)[number];
 
 export const PAGE_THEME_META: Record<PageTheme, { name: string; description: string }> = {
-  "clean-pro": { name: "清爽专业", description: "白底单栏、克制留白，适合大多数岗位投递" },
-  "product-launch": { name: "产品主页风", description: "把自己当产品发布：大字定位、优势卡片、吸底行动按钮" },
-  "creative-portfolio": { name: "创意作品集风", description: "深色高对比、超大字号、项目卡片网格，适合创意岗" },
-  "enterprise-tech": { name: "企业科技风", description: "深海军蓝、网格线与等宽字体点缀，适合技术岗" },
+  "clean-pro": { name: "清爽专业", description: "招聘简历双栏：经历为主，技能与联系方式在侧栏" },
+  "product-launch": { name: "产品主页风", description: "发布页首屏：优势先行，项目按案例展示" },
+  "creative-portfolio": { name: "创意作品集风", description: "项目优先的作品墙：编辑式大标题与不对称网格" },
+  "enterprise-tech": { name: "企业科技风", description: "能力仪表盘：事实概览、经历表格与项目矩阵" },
+  "editorial-story": { name: "人物杂志风", description: "人物特稿结构：关于我开篇，项目像故事展开" },
+  "career-timeline": { name: "职业时间轴", description: "左侧个人档案，右侧按经历、项目、教育阅读" },
+  "minimal-swiss": { name: "瑞士极简风", description: "无卡片网格简历：细分隔线、明确目录与高信息密度" },
+  "developer-docs": { name: "开发者文档", description: "文档站结构：README 开场、项目文件与履历日志" },
 };
 
 export const PAGE_CONTENT_SCHEMA_VERSION = "1.0";

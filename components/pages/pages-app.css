@@ -46,9 +46,13 @@
 
 .theme-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
 .swatch-clean-pro { background: linear-gradient(135deg, #ffffff 50%, #2563eb 50%); border: 1px solid #d7dee8; }
-.swatch-product-launch { background: linear-gradient(135deg, #7c3aed, #f97316); }
-.swatch-creative-portfolio { background: linear-gradient(135deg, #111013 55%, #f5c518 55%); }
-.swatch-enterprise-tech { background: linear-gradient(135deg, #0b1220 55%, #38bdf8 55%); }
+.swatch-product-launch { background: linear-gradient(135deg, #172f3f 50%, #f36f45 50%); }
+.swatch-creative-portfolio { background: linear-gradient(135deg, #151515 55%, #d8ff3e 55%); }
+.swatch-enterprise-tech { background: linear-gradient(135deg, #eaf1f8 50%, #176b87 50%); }
+.swatch-editorial-story { background: linear-gradient(135deg, #f4efe5 50%, #a4462f 50%); }
+.swatch-career-timeline { background: linear-gradient(135deg, #f4f6f1 50%, #496348 50%); }
+.swatch-minimal-swiss { background: linear-gradient(135deg, #ffffff 50%, #111111 50%); border: 1px solid #d7dee8; }
+.swatch-developer-docs { background: linear-gradient(135deg, #101613 50%, #7ee2a8 50%); }
 
 /* ---------- creator ---------- */
 .creator-main { max-width: 980px; }
