@@ -115,7 +115,7 @@ flowchart LR
 ### 4. Supabase Auth 与数据隔离
 
 - `@supabase/ssr` 将登录会话保存在 Cookie 中；
-- Next.js 16 的 `proxy.ts` 负责刷新会话；
+- `middleware.ts` 在 Edge 运行时刷新登录会话，兼容 Cloudflare OpenNext；
 - 服务端通过 `getClaims()` 验证用户，不信任未验证的客户端 Session；
 - 所有业务表启用 RLS，用户只能访问自己的记录；
 - 前端只使用 Supabase Publishable Key，不使用 Secret Key 或 Service Role Key；
@@ -284,7 +284,7 @@ lib/
   page-draft.ts            # 游客本地草稿（localStorage，24h 过期）
   deepseek.ts              # 共享 DeepSeek 客户端、限流、错误归一化
   pdf.ts                   # 浏览器端 PDF 提取
-proxy.ts                   # Supabase 会话刷新
+middleware.ts              # Supabase 会话刷新（Edge 运行时）
 open-next.config.ts        # OpenNext Cloudflare 适配配置
 wrangler.jsonc             # Cloudflare Worker、静态资源与兼容性配置
 public/
