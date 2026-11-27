@@ -13,6 +13,7 @@ import {
   type PageContent, type PageSectionKey, type PageTheme,
 } from "@/lib/page-schema";
 import { clearLocalDraft, saveLocalDraft } from "@/lib/page-draft";
+import { DegreeField, ExperienceField, LocationField, PeriodField, SkillCategoryField } from "./editor-fields";
 
 export type EditorInitial = {
   id: string | null;
@@ -26,18 +27,43 @@ export type EditorInitial = {
 
 type SaveState = "saved" | "saving" | "error" | "local";
 
+const SECTION_NAV = [
+  ["profile", "个人定位"], ["highlights", "核心优势"], ["about", "关于我"],
+  ["projects", "项目经历"], ["skills", "技能"], ["experience", "工作经历"],
+  ["education", "教育背景"], ["contacts", "联系方式"], ["cta", "行动按钮"],
+] as const;
+
 /* ---------- small form primitives ---------- */
+
+function FormLabel({ label }: { label: string }) {
+  const optional = label.includes("（可选");
+  const cleanLabel = label.replace(/（可选）/g, "").replace(/（可选，([^）]+)）/g, "（$1）");
+  return <span className="ed-field-label"><span>{cleanLabel}</span>{optional && <small>可选</small>}</span>;
+}
+
+function useAutoGrow(value: string, rows: number) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const minHeight = Math.max(80, rows * 24 + 18);
+    element.style.height = "auto";
+    element.style.height = `${Math.min(Math.max(element.scrollHeight, minHeight), 240)}px`;
+  }, [value, rows]);
+  return ref;
+}
 
 function Field({ label, value, onChange, maxLength, placeholder, type = "text" }: {
   label: string; value: string; onChange: (value: string) => void; maxLength?: number; placeholder?: string; type?: string;
 }) {
-  return <label className="ed-field"><span>{label}</span><input type={type} value={value} maxLength={maxLength} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></label>;
+  return <label className="ed-field"><FormLabel label={label} /><input type={type} value={value} maxLength={maxLength} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />{maxLength && <small className="ed-char-count">{value.length}/{maxLength}</small>}</label>;
 }
 
 function Area({ label, value, onChange, maxLength, rows = 3, placeholder }: {
   label: string; value: string; onChange: (value: string) => void; maxLength?: number; rows?: number; placeholder?: string;
 }) {
-  return <label className="ed-field"><span>{label}</span><textarea value={value} maxLength={maxLength} rows={rows} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></label>;
+  const ref = useAutoGrow(value, rows);
+  return <label className="ed-field"><FormLabel label={label} /><textarea ref={ref} value={value} maxLength={maxLength} rows={rows} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />{maxLength && <small className="ed-char-count">{value.length}/{maxLength}</small>}</label>;
 }
 
 // Raw text stays local while typing; commit parsed tokens on blur so separators
@@ -50,7 +76,7 @@ function TokensInput({ label, value, onCommit, placeholder }: {
   const [prevValue, setPrevValue] = useState(value);
   if (prevValue !== value) { setPrevValue(value); setRaw(value.join("、")); }
   return (
-    <label className="ed-field"><span>{label}</span>
+    <label className="ed-field"><FormLabel label={label} />
       <input value={raw} placeholder={placeholder || "用顿号或逗号分隔"} onChange={(event) => setRaw(event.target.value)}
         onBlur={() => onCommit(raw.split(/[,，、;；\n]+/).map((item) => item.trim()).filter(Boolean).slice(0, 12))} />
     </label>
@@ -62,11 +88,13 @@ function LinesInput({ label, value, onCommit, max, placeholder }: {
 }) {
   const [raw, setRaw] = useState(value.join("\n"));
   const [prevValue, setPrevValue] = useState(value);
+  const ref = useAutoGrow(raw, 3);
   if (prevValue !== value) { setPrevValue(value); setRaw(value.join("\n")); }
   return (
-    <label className="ed-field"><span>{label}</span>
-      <textarea value={raw} rows={3} placeholder={placeholder || "每行一条"} onChange={(event) => setRaw(event.target.value)}
+    <label className="ed-field"><FormLabel label={label} />
+      <textarea ref={ref} value={raw} rows={3} placeholder={placeholder || "每行一条"} onChange={(event) => setRaw(event.target.value)}
         onBlur={() => onCommit(raw.split("\n").map((item) => item.trim()).filter(Boolean).slice(0, max))} />
+      <small className="ed-char-count">{raw.split("\n").map((item) => item.trim()).filter(Boolean).length}/{max} 条</small>
     </label>
   );
 }
@@ -83,22 +111,40 @@ function ItemControls({ index, count, onMove, onRemove }: {
   );
 }
 
-function Section({ sectionKey, title, visible, onToggle, children, defaultOpen = false }: {
-  sectionKey?: PageSectionKey; title: string; visible?: boolean; onToggle?: (visible: boolean) => void; children: React.ReactNode; defaultOpen?: boolean;
+function ItemCard({ title, subtitle, open, onToggle, children, controls }: {
+  title: string; subtitle?: string; open: boolean; onToggle: () => void;
+  children: React.ReactNode; controls: React.ReactNode;
+}) {
+  return <div className={`ed-item ${open ? "is-open" : ""}`}>
+    <div className="ed-item-head">
+      <button type="button" className="ed-item-toggle" aria-expanded={open} onClick={onToggle}>
+        <ChevronDown size={14} className="ed-item-chevron" />
+        <span><strong>{title || "未命名"}</strong>{subtitle && <small>{subtitle}</small>}</span>
+      </button>
+      {controls}
+    </div>
+    {open && <div className="ed-item-content">{children}</div>}
+  </div>;
+}
+
+function Section({ id, sectionKey, title, count, visible, onVisibleChange, open, onToggle, children }: {
+  id: string; sectionKey?: PageSectionKey; title: string; count?: number; visible?: boolean;
+  onVisibleChange?: (visible: boolean) => void; open: boolean; onToggle: () => void; children: React.ReactNode;
 }) {
   return (
-    <details className="ed-section" open={defaultOpen}>
-      <summary>
+    <details id={`ed-section-${id}`} className="ed-section" open={open}>
+      <summary onClick={(event) => { event.preventDefault(); onToggle(); }}>
         <ChevronDown size={15} className="ed-section-chevron" />
         <strong>{title}</strong>
-        {sectionKey && onToggle && (
+        {typeof count === "number" && <span className="ed-section-count">{count}</span>}
+        {sectionKey && onVisibleChange && (
           <label className="ed-visibility" onClick={(event) => event.stopPropagation()}>
-            <input type="checkbox" checked={visible} onChange={(event) => onToggle(event.target.checked)} />
+            <input type="checkbox" checked={visible} onChange={(event) => onVisibleChange(event.target.checked)} />
             <span>{visible ? "显示" : "隐藏"}</span>
           </label>
         )}
       </summary>
-      <div className="ed-section-body">{children}</div>
+      {open && <div className="ed-section-body">{children}</div>}
     </details>
   );
 }
@@ -131,6 +177,8 @@ export function PageEditor({ initial, isLoggedIn, autoOpenPublish = false }: { i
   const [publishError, setPublishError] = useState("");
   const [copied, setCopied] = useState(false);
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+  const [openSection, setOpenSection] = useState<string | null>("profile");
+  const [openItem, setOpenItem] = useState<string | null>(null);
   const skipFirstSave = useRef(true);
   const saveSeq = useRef(0);
 
@@ -198,6 +246,31 @@ export function PageEditor({ initial, isLoggedIn, autoOpenPublish = false }: { i
   function setCta(patch: Partial<PageContent["cta"]>) { mutate({ ...content, cta: { ...content.cta, ...patch } }); }
   function setSectionVisible(key: PageSectionKey, visible: boolean) {
     mutate({ ...content, settings: { sections: { ...content.settings.sections, [key]: visible } } });
+  }
+  function selectSection(id: string | null) {
+    setOpenSection(id);
+    setOpenItem(null);
+  }
+  function toggleSection(id: string) {
+    selectSection(openSection === id ? null : id);
+  }
+  function jumpToSection(id: string) {
+    selectSection(id);
+    window.setTimeout(() => {
+      const element = document.getElementById(`ed-section-${id}`);
+      if (!element) return;
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      if (window.innerWidth <= 860) {
+        const topbarHeight = document.querySelector(".editor-topbar")?.getBoundingClientRect().height || 0;
+        const top = element.getBoundingClientRect().top + window.scrollY - topbarHeight - 12;
+        window.scrollTo({ top, behavior });
+      } else {
+        element.scrollIntoView({ block: "start", behavior });
+      }
+    }, 0);
+  }
+  function toggleItem(key: string) {
+    setOpenItem(openItem === key ? null : key);
   }
 
   async function applySlug() {
@@ -370,101 +443,99 @@ export function PageEditor({ initial, isLoggedIn, autoOpenPublish = false }: { i
       <div className={`editor-body show-${mobileTab}`}>
         <div className="editor-form">
           {isLocal && <p className="editor-local-note"><CircleAlert size={13} /> 草稿仅保存在当前浏览器，登录后可云端保存并发布。</p>}
+          <div className="ed-form-toolbar">
+            <select aria-label="快速跳转分区" value={openSection || ""} onChange={(event) => jumpToSection(event.target.value)}>
+              <option value="" disabled>快速跳转分区</option>
+              {SECTION_NAV.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            </select>
+            <button type="button" disabled={!openSection} onClick={() => selectSection(null)}>全部收起</button>
+          </div>
 
-          <Section title="个人定位" defaultOpen>
+          <Section id="profile" title="个人定位" open={openSection === "profile"} onToggle={() => toggleSection("profile")}>
             <Field label="姓名" value={content.profile.name} maxLength={60} onChange={(value) => setProfile({ name: value })} />
             <Field label="一句话定位" value={content.profile.headline} maxLength={80} placeholder="如：5 年经验的 B 端产品经理" onChange={(value) => setProfile({ headline: value })} />
             <Area label="价值主张（2—3 句）" value={content.profile.tagline} maxLength={400} onChange={(value) => setProfile({ tagline: value })} />
-            <div className="ed-field-row">
-              <Field label="所在城市（可选）" value={content.profile.location || ""} maxLength={60} onChange={(value) => setProfile({ location: value || undefined })} />
-              <Field label="经验标签（可选）" value={content.profile.yearsLabel || ""} maxLength={40} placeholder="如：5 年经验" onChange={(value) => setProfile({ yearsLabel: value || undefined })} />
+            <div className="ed-field-row ed-profile-meta-row">
+              <LocationField value={content.profile.location || ""} onChange={(value) => setProfile({ location: value || undefined })} />
+              <ExperienceField value={content.profile.yearsLabel || ""} onChange={(value) => setProfile({ yearsLabel: value || undefined })} />
             </div>
           </Section>
 
-          <Section title="核心优势" sectionKey="highlights" visible={content.settings.sections.highlights} onToggle={(v) => setSectionVisible("highlights", v)} defaultOpen>
+          <Section id="highlights" title="核心优势" count={content.highlights.length} sectionKey="highlights" visible={content.settings.sections.highlights} onVisibleChange={(v) => setSectionVisible("highlights", v)} open={openSection === "highlights"} onToggle={() => toggleSection("highlights")}>
             {content.highlights.map((item, index) => (
-              <div key={index} className="ed-item">
-                <ItemControls index={index} count={content.highlights.length}
-                  onMove={(dir) => mutate({ ...content, highlights: move(content.highlights, index, dir) })}
-                  onRemove={() => mutate({ ...content, highlights: content.highlights.filter((_, i) => i !== index) })} />
+              <ItemCard key={index} title={item.title} open={openItem === `highlights:${index}`} onToggle={() => toggleItem(`highlights:${index}`)} controls={<ItemControls index={index} count={content.highlights.length}
+                onMove={(dir) => { setOpenItem(null); mutate({ ...content, highlights: move(content.highlights, index, dir) }); }}
+                onRemove={() => { setOpenItem(null); mutate({ ...content, highlights: content.highlights.filter((_, i) => i !== index) }); }} />}>
                 <Field label="优势标题" value={item.title} maxLength={40} onChange={(value) => mutate({ ...content, highlights: content.highlights.map((it, i) => i === index ? { ...it, title: value } : it) })} />
                 <Area label="真实依据" value={item.description} maxLength={300} rows={2} onChange={(value) => mutate({ ...content, highlights: content.highlights.map((it, i) => i === index ? { ...it, description: value } : it) })} />
-              </div>
+              </ItemCard>
             ))}
-            <button type="button" className="ed-add" disabled={content.highlights.length >= 5} onClick={() => mutate({ ...content, highlights: [...content.highlights, { title: "新优势", description: "补充真实依据" }] })}><Plus size={13} /> 添加优势（最多 5 条）</button>
+            <button type="button" className="ed-add" disabled={content.highlights.length >= 5} onClick={() => { const nextIndex = content.highlights.length; setOpenItem(`highlights:${nextIndex}`); mutate({ ...content, highlights: [...content.highlights, { title: "新优势", description: "补充真实依据" }] }); }}><Plus size={13} /> 添加优势（最多 5 条）</button>
           </Section>
 
-          <Section title="关于我" sectionKey="about" visible={content.settings.sections.about} onToggle={(v) => setSectionVisible("about", v)}>
+          <Section id="about" title="关于我" sectionKey="about" visible={content.settings.sections.about} onVisibleChange={(v) => setSectionVisible("about", v)} open={openSection === "about"} onToggle={() => toggleSection("about")}>
             <Area label="职业画像" value={content.about} maxLength={2000} rows={5} onChange={(value) => mutate({ ...content, about: value })} />
           </Section>
 
-          <Section title="项目经历" sectionKey="projects" visible={content.settings.sections.projects} onToggle={(v) => setSectionVisible("projects", v)}>
+          <Section id="projects" title="项目经历" count={content.projects.length} sectionKey="projects" visible={content.settings.sections.projects} onVisibleChange={(v) => setSectionVisible("projects", v)} open={openSection === "projects"} onToggle={() => toggleSection("projects")}>
             {content.projects.map((project, index) => (
-              <div key={index} className="ed-item">
-                <ItemControls index={index} count={content.projects.length}
-                  onMove={(dir) => mutate({ ...content, projects: move(content.projects, index, dir) })}
-                  onRemove={() => mutate({ ...content, projects: content.projects.filter((_, i) => i !== index) })} />
+              <ItemCard key={index} title={project.name} subtitle={project.period} open={openItem === `projects:${index}`} onToggle={() => toggleItem(`projects:${index}`)} controls={<ItemControls index={index} count={content.projects.length}
+                onMove={(dir) => { setOpenItem(null); mutate({ ...content, projects: move(content.projects, index, dir) }); }}
+                onRemove={() => { setOpenItem(null); mutate({ ...content, projects: content.projects.filter((_, i) => i !== index) }); }} />}>
                 <Field label="项目名" value={project.name} maxLength={80} onChange={(value) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, name: value } : it) })} />
-                <div className="ed-field-row">
-                  <Field label="角色（可选）" value={project.role || ""} maxLength={60} onChange={(value) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, role: value || undefined } : it) })} />
-                  <Field label="时间（可选）" value={project.period || ""} maxLength={40} onChange={(value) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, period: value || undefined } : it) })} />
-                </div>
+                <Field label="角色（可选）" value={project.role || ""} maxLength={60} onChange={(value) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, role: value || undefined } : it) })} />
+                <PeriodField value={project.period || ""} presentLabel="进行中" onChange={(value) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, period: value || undefined } : it) })} />
                 <Area label="项目概述" value={project.summary} maxLength={600} rows={2} onChange={(value) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, summary: value } : it) })} />
                 <LinesInput label="成果亮点（每行一条，最多 4 条）" value={project.achievements} max={4} onCommit={(items) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, achievements: items } : it) })} />
                 <TokensInput label="标签（顿号分隔，最多 6 个）" value={project.tags} onCommit={(items) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, tags: items.slice(0, 6) } : it) })} />
                 <Field label="链接（可选，http/https）" value={project.link || ""} maxLength={300} onChange={(value) => mutate({ ...content, projects: content.projects.map((it, i) => i === index ? { ...it, link: value || undefined } : it) })} />
-              </div>
+              </ItemCard>
             ))}
-            <button type="button" className="ed-add" disabled={content.projects.length >= 8} onClick={() => mutate({ ...content, projects: [...content.projects, { name: "新项目", summary: "补充项目概述", achievements: [], tags: [] }] })}><Plus size={13} /> 添加项目（最多 8 个）</button>
+            <button type="button" className="ed-add" disabled={content.projects.length >= 8} onClick={() => { const nextIndex = content.projects.length; setOpenItem(`projects:${nextIndex}`); mutate({ ...content, projects: [...content.projects, { name: "新项目", summary: "补充项目概述", achievements: [], tags: [] }] }); }}><Plus size={13} /> 添加项目（最多 8 个）</button>
           </Section>
 
-          <Section title="技能" sectionKey="skills" visible={content.settings.sections.skills} onToggle={(v) => setSectionVisible("skills", v)}>
+          <Section id="skills" title="技能" count={content.skills.length} sectionKey="skills" visible={content.settings.sections.skills} onVisibleChange={(v) => setSectionVisible("skills", v)} open={openSection === "skills"} onToggle={() => toggleSection("skills")}>
             {content.skills.map((group, index) => (
-              <div key={index} className="ed-item">
-                <ItemControls index={index} count={content.skills.length}
-                  onMove={(dir) => mutate({ ...content, skills: move(content.skills, index, dir) })}
-                  onRemove={() => mutate({ ...content, skills: content.skills.filter((_, i) => i !== index) })} />
-                <Field label="类别" value={group.category} maxLength={40} onChange={(value) => mutate({ ...content, skills: content.skills.map((it, i) => i === index ? { ...it, category: value } : it) })} />
+              <ItemCard key={index} title={group.category} subtitle={`${group.items.length} 项技能`} open={openItem === `skills:${index}`} onToggle={() => toggleItem(`skills:${index}`)} controls={<ItemControls index={index} count={content.skills.length}
+                onMove={(dir) => { setOpenItem(null); mutate({ ...content, skills: move(content.skills, index, dir) }); }}
+                onRemove={() => { setOpenItem(null); mutate({ ...content, skills: content.skills.filter((_, i) => i !== index) }); }} />}>
+                <SkillCategoryField value={group.category} onChange={(value) => mutate({ ...content, skills: content.skills.map((it, i) => i === index ? { ...it, category: value } : it) })} />
                 <TokensInput label="技能项（顿号分隔）" value={group.items} onCommit={(items) => mutate({ ...content, skills: content.skills.map((it, i) => i === index ? { ...it, items: items.length ? items : ["待补充"] } : it) })} />
-              </div>
+              </ItemCard>
             ))}
-            <button type="button" className="ed-add" disabled={content.skills.length >= 6} onClick={() => mutate({ ...content, skills: [...content.skills, { category: "新类别", items: ["新技能"] }] })}><Plus size={13} /> 添加分组（最多 6 组）</button>
+            <button type="button" className="ed-add" disabled={content.skills.length >= 6} onClick={() => { const nextIndex = content.skills.length; setOpenItem(`skills:${nextIndex}`); mutate({ ...content, skills: [...content.skills, { category: "新类别", items: ["新技能"] }] }); }}><Plus size={13} /> 添加分组（最多 6 组）</button>
           </Section>
 
-          <Section title="工作经历" sectionKey="experience" visible={content.settings.sections.experience} onToggle={(v) => setSectionVisible("experience", v)}>
+          <Section id="experience" title="工作经历" count={content.experience.length} sectionKey="experience" visible={content.settings.sections.experience} onVisibleChange={(v) => setSectionVisible("experience", v)} open={openSection === "experience"} onToggle={() => toggleSection("experience")}>
             {content.experience.map((item, index) => (
-              <div key={index} className="ed-item">
-                <ItemControls index={index} count={content.experience.length}
-                  onMove={(dir) => mutate({ ...content, experience: move(content.experience, index, dir) })}
-                  onRemove={() => mutate({ ...content, experience: content.experience.filter((_, i) => i !== index) })} />
+              <ItemCard key={index} title={item.company} subtitle={[item.title, item.period].filter(Boolean).join(" · ")} open={openItem === `experience:${index}`} onToggle={() => toggleItem(`experience:${index}`)} controls={<ItemControls index={index} count={content.experience.length}
+                onMove={(dir) => { setOpenItem(null); mutate({ ...content, experience: move(content.experience, index, dir) }); }}
+                onRemove={() => { setOpenItem(null); mutate({ ...content, experience: content.experience.filter((_, i) => i !== index) }); }} />}>
                 <div className="ed-field-row">
                   <Field label="公司" value={item.company} maxLength={80} onChange={(value) => mutate({ ...content, experience: content.experience.map((it, i) => i === index ? { ...it, company: value } : it) })} />
                   <Field label="职位" value={item.title} maxLength={60} onChange={(value) => mutate({ ...content, experience: content.experience.map((it, i) => i === index ? { ...it, title: value } : it) })} />
                 </div>
-                <Field label="时间（可选）" value={item.period || ""} maxLength={40} onChange={(value) => mutate({ ...content, experience: content.experience.map((it, i) => i === index ? { ...it, period: value || undefined } : it) })} />
+                <PeriodField value={item.period || ""} onChange={(value) => mutate({ ...content, experience: content.experience.map((it, i) => i === index ? { ...it, period: value || undefined } : it) })} />
                 <Area label="概述" value={item.summary} maxLength={600} rows={2} onChange={(value) => mutate({ ...content, experience: content.experience.map((it, i) => i === index ? { ...it, summary: value } : it) })} />
-              </div>
+              </ItemCard>
             ))}
-            <button type="button" className="ed-add" disabled={content.experience.length >= 8} onClick={() => mutate({ ...content, experience: [...content.experience, { company: "公司名", title: "职位", summary: "" }] })}><Plus size={13} /> 添加经历</button>
+            <button type="button" className="ed-add" disabled={content.experience.length >= 8} onClick={() => { const nextIndex = content.experience.length; setOpenItem(`experience:${nextIndex}`); mutate({ ...content, experience: [...content.experience, { company: "公司名", title: "职位", summary: "" }] }); }}><Plus size={13} /> 添加经历</button>
           </Section>
 
-          <Section title="教育背景" sectionKey="education" visible={content.settings.sections.education} onToggle={(v) => setSectionVisible("education", v)}>
+          <Section id="education" title="教育背景" count={content.education.length} sectionKey="education" visible={content.settings.sections.education} onVisibleChange={(v) => setSectionVisible("education", v)} open={openSection === "education"} onToggle={() => toggleSection("education")}>
             {content.education.map((item, index) => (
-              <div key={index} className="ed-item">
-                <ItemControls index={index} count={content.education.length}
-                  onMove={(dir) => mutate({ ...content, education: move(content.education, index, dir) })}
-                  onRemove={() => mutate({ ...content, education: content.education.filter((_, i) => i !== index) })} />
+              <ItemCard key={index} title={item.school} subtitle={[item.degree, item.period].filter(Boolean).join(" · ")} open={openItem === `education:${index}`} onToggle={() => toggleItem(`education:${index}`)} controls={<ItemControls index={index} count={content.education.length}
+                onMove={(dir) => { setOpenItem(null); mutate({ ...content, education: move(content.education, index, dir) }); }}
+                onRemove={() => { setOpenItem(null); mutate({ ...content, education: content.education.filter((_, i) => i !== index) }); }} />}>
                 <Field label="学校" value={item.school} maxLength={80} onChange={(value) => mutate({ ...content, education: content.education.map((it, i) => i === index ? { ...it, school: value } : it) })} />
-                <div className="ed-field-row">
-                  <Field label="学历/专业（可选）" value={item.degree || ""} maxLength={60} onChange={(value) => mutate({ ...content, education: content.education.map((it, i) => i === index ? { ...it, degree: value || undefined } : it) })} />
-                  <Field label="时间（可选）" value={item.period || ""} maxLength={40} onChange={(value) => mutate({ ...content, education: content.education.map((it, i) => i === index ? { ...it, period: value || undefined } : it) })} />
-                </div>
-              </div>
+                <DegreeField value={item.degree || ""} onChange={(value) => mutate({ ...content, education: content.education.map((it, i) => i === index ? { ...it, degree: value || undefined } : it) })} />
+                <PeriodField value={item.period || ""} onChange={(value) => mutate({ ...content, education: content.education.map((it, i) => i === index ? { ...it, period: value || undefined } : it) })} />
+              </ItemCard>
             ))}
-            <button type="button" className="ed-add" disabled={content.education.length >= 4} onClick={() => mutate({ ...content, education: [...content.education, { school: "学校名" }] })}><Plus size={13} /> 添加教育经历</button>
+            <button type="button" className="ed-add" disabled={content.education.length >= 4} onClick={() => { const nextIndex = content.education.length; setOpenItem(`education:${nextIndex}`); mutate({ ...content, education: [...content.education, { school: "学校名" }] }); }}><Plus size={13} /> 添加教育经历</button>
           </Section>
 
-          <Section title="联系方式" sectionKey="contacts" visible={content.settings.sections.contacts} onToggle={(v) => setSectionVisible("contacts", v)}>
+          <Section id="contacts" title="联系方式" sectionKey="contacts" visible={content.settings.sections.contacts} onVisibleChange={(v) => setSectionVisible("contacts", v)} open={openSection === "contacts"} onToggle={() => toggleSection("contacts")}>
             <p className="ed-hint">只保留你愿意公开的联系方式，清空即不展示。发布前会再次确认。</p>
             <div className="ed-field-row">
               <Field label="邮箱（可选）" value={content.contacts.email || ""} maxLength={120} onChange={(value) => setContacts({ email: value || undefined })} />
@@ -477,9 +548,9 @@ export function PageEditor({ initial, isLoggedIn, autoOpenPublish = false }: { i
             <Field label="个人网站（可选）" value={content.contacts.website || ""} maxLength={300} onChange={(value) => setContacts({ website: value || undefined })} />
           </Section>
 
-          <Section title="行动按钮" defaultOpen>
+          <Section id="cta" title="行动按钮" open={openSection === "cta"} onToggle={() => toggleSection("cta")}>
             <Field label="按钮文案" value={content.cta.label} maxLength={30} onChange={(value) => setCta({ label: value })} />
-            <label className="ed-field"><span>按钮类型</span>
+            <label className="ed-field"><FormLabel label="按钮类型" />
               <select value={content.cta.type} onChange={(event) => setCta({ type: event.target.value as "email" | "link" })}>
                 <option value="email">发送邮件</option>
                 <option value="link">跳转链接</option>
