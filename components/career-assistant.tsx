@@ -270,22 +270,22 @@ export function CareerAssistant({ initialUser }: { initialUser: CurrentUser | nu
             </div>
 
             <div className="input-card jd-card">
-              <div className="input-card-heading"><span className="step-icon"><BriefcaseBusiness size={20} /></span><div><h3>目标岗位描述</h3><p>粘贴完整 JD，分析会更准确</p></div><span className="required-tag">必填</span></div>
+              <div className="input-card-heading"><span className="step-icon"><BriefcaseBusiness size={20} /></span><div><h3>目标岗位描述</h3><p>粘贴完整简历描述，分析会更准确</p></div><span className="required-tag">必填</span></div>
               <div className="textarea-wrap">
                 <textarea value={jobDescription} maxLength={20_000} disabled={isAnalyzing} onChange={(event) => { setJobDescription(event.target.value); jobPostIdRef.current = null; if (result) setInputChanged(true); }} placeholder={"例如：\n\n岗位职责：\n1. 负责产品需求分析与功能规划…\n2. 协同设计和研发团队推进项目…\n\n任职要求：\n1. 3 年以上相关经验…"} aria-label="目标岗位描述" />
                 {jobDescription && !isAnalyzing && <button type="button" className="clear-textarea" onClick={() => { setJobDescription(""); jobPostIdRef.current = null; if (result) setInputChanged(true); }} aria-label="清空岗位描述"><X size={15} /></button>}
                 <div className="character-count"><span>{jobDescription.trim().length > 0 && jobDescription.trim().length < 20 ? "至少输入 20 个字符" : "支持粘贴完整岗位职责与任职要求"}</span><span className={jobDescription.length > 19_000 ? "near-limit" : ""}>{jobDescription.length.toLocaleString()} / 20,000</span></div>
               </div>
-              <div className="jd-tip"><Sparkles size={14} /><span>小提示：包含岗位职责、任职要求和技能关键词的完整 JD，能带来更有针对性的建议。</span></div>
+              <div className="jd-tip"><Sparkles size={14} /><span>小提示：在简历描述中补充岗位职责、任职要求和技能关键词，能让建议更有针对性。</span></div>
             </div>
           </div>
 
           {error && <div className="error-banner" role="alert"><CircleAlert size={19} /><div><strong>这次没有顺利完成</strong><p>{error}</p></div>{resumeText && jobDescription.trim().length >= 20 && !isAnalyzing && <button type="button" onClick={() => void analyze()}>重试 <RefreshCw size={14} /></button>}</div>}
           {inputChanged && result && <div className="changed-banner"><CircleAlert size={16} />岗位描述已变更，当前结果仍基于上一次输入。</div>}
 
-          {initialUser && <label className="save-history-toggle"><input type="checkbox" checked={saveHistory} disabled={isAnalyzing} onChange={(event) => setSaveHistory(event.target.checked)} /><span><strong>保存本次分析到历史</strong><small>{saveHistory ? "不保存原 PDF，只保存解析文字、JD 和报告，仅当前账户可见。" : "本次不保存历史，也不写入数据库。"}</small></span></label>}
+          {initialUser && <label className="save-history-toggle"><input type="checkbox" checked={saveHistory} disabled={isAnalyzing} onChange={(event) => setSaveHistory(event.target.checked)} /><span><strong>保存本次分析到历史</strong><small>{saveHistory ? "不保存原 PDF，只保存解析文字、简历描述和报告，仅当前账户可见。" : "本次不保存历史，也不写入数据库。"}</small></span></label>}
           <div className="analyze-row">
-            <div className="analyze-privacy"><ShieldCheck size={17} /><p>点击分析即表示你同意将<strong>提取的简历文字和 JD</strong>发送至本站服务器及 DeepSeek 进行处理。{initialUser && saveHistory ? "仅保存解析文字与报告，不上传原 PDF。" : "本次不保存历史。"}</p></div>
+            <div className="analyze-privacy"><ShieldCheck size={17} /><p>点击分析即表示你同意将<strong>提取的简历文字和你填写的简历描述</strong>发送至本站服务器及 DeepSeek 进行处理。{initialUser && saveHistory ? "仅保存解析文字与报告，不上传原 PDF。" : "本次不保存历史。"}</p></div>
             <button type="button" className="analyze-button" disabled={!canAnalyze} onClick={() => void analyze()}>{isAnalyzing ? <><RefreshCw size={18} className="spin" /> 正在生成求职策略…</> : <><Sparkles size={18} /> 开始 AI 分析 <ArrowRight size={18} /></>}</button>
           </div>
         </section>
@@ -296,16 +296,10 @@ export function CareerAssistant({ initialUser }: { initialUser: CurrentUser | nu
         {saveWarning && <div className="changed-banner"><CircleAlert size={16} />{saveWarning}</div>}
         {result && !isAnalyzing && <Results result={result} />}
 
-        {!result && !isAnalyzing && <section className="empty-results"><div className="empty-heading"><span className="section-number">02 / 获取结果</span><h2>一次分析，做好四重准备</h2><p>完成上方信息，AI 将在这里为你生成专属求职策略。</p></div><div className="benefit-grid"><article><span><Target size={21} /></span><div><small>01</small><h3>岗位匹配度分析</h3><p>看清优势与差距，不再盲目投递。</p></div></article><article><span><FileCheck2 size={21} /></span><div><small>02</small><h3>简历优化建议</h3><p>围绕 JD 提供具体、可执行的修改方向。</p></div></article><article><span><FileText size={21} /></span><div><small>03</small><h3>一封专属求职信</h3><p>让你的真实经历与岗位需求产生连接。</p></div></article><article><span><Sparkles size={21} /></span><div><small>04</small><h3>10 组面试问答</h3><p>提前演练可能的问题，表达更从容。</p></div></article></div></section>}
+        {!result && !isAnalyzing && <section className="empty-results"><div className="empty-heading"><span className="section-number">02 / 获取结果</span><h2>一次分析，做好四重准备</h2><p>完成上方信息，AI 将在这里为你生成专属求职策略。</p></div><div className="benefit-grid"><article><span><Target size={21} /></span><div><small>01</small><h3>岗位匹配度分析</h3><p>看清优势与差距，不再盲目投递。</p></div></article><article><span><FileCheck2 size={21} /></span><div><small>02</small><h3>简历优化建议</h3><p>结合简历描述，提供具体、可执行的修改方向。</p></div></article><article><span><FileText size={21} /></span><div><small>03</small><h3>一封专属求职信</h3><p>让你的真实经历与岗位需求产生连接。</p></div></article><article><span><Sparkles size={21} /></span><div><small>04</small><h3>10 组面试问答</h3><p>提前演练可能的问题，表达更从容。</p></div></article></div></section>}
       </main>
 
       <footer className="site-footer" id="privacy"><div className="footer-brand"><span className="brand-mark"><BriefcaseBusiness size={18} /></span><strong>职达 AI</strong><span>让每一次投递更有准备。</span></div><div className="footer-privacy"><ShieldCheck size={15} /><span>{initialUser ? "保存由你控制 · RLS 数据隔离 · 可随时删除历史" : "游客模式不保存历史 · 不记录简历正文 · 刷新页面后结果清除"}</span></div><a href="#top">回到顶部 <ArrowDown size={14} /></a></footer>
     </div>
   );
 }
-
-
-
-
-
-

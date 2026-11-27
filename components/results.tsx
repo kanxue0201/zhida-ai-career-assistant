@@ -152,7 +152,7 @@ export function Results({ result }: { result: AnalysisResult }) {
                       <div className="suggestion-meta"><span className={`priority priority-${item.priority}`}>{item.priority}优先级</span><span>{item.section}</span></div>
                       <h4>{item.suggestion}</h4>
                       <div className="suggestion-detail"><strong>当前问题</strong><p>{item.issue}</p></div>
-                      <div className="suggestion-detail"><strong>对应 JD</strong><p>{item.jdRequirement}</p></div>
+                      <div className="suggestion-detail"><strong>对应简历描述</strong><p>{item.jdRequirement}</p></div>
                       <div className="rewrite-example"><span><Sparkles size={14} /> 改写示例</span><p>{item.rewriteExample}</p></div>
                     </div>
                   </article>

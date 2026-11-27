@@ -105,13 +105,13 @@ function InfoDialog({ type, onClose }: { type: InfoType; onClose: () => void }) 
         {type === "workflow" ? (
           <ol className="workflow-dialog-steps">
             <li><span className="workflow-dialog-number">01</span><span className="workflow-dialog-step-icon"><FileText size={18} /></span><div><strong>上传 PDF 简历</strong><p>浏览器本地提取文字，原文件不上传。</p></div></li>
-            <li><span className="workflow-dialog-number">02</span><span className="workflow-dialog-step-icon"><BriefcaseBusiness size={18} /></span><div><strong>粘贴目标岗位</strong><p>提供完整 JD，让建议更贴合岗位需求。</p></div></li>
+            <li><span className="workflow-dialog-number">02</span><span className="workflow-dialog-step-icon"><BriefcaseBusiness size={18} /></span><div><strong>粘贴目标岗位</strong><p>提供完整的简历描述，让建议更贴合你的求职目标。</p></div></li>
             <li><span className="workflow-dialog-number">03</span><span className="workflow-dialog-step-icon"><Sparkles size={18} /></span><div><strong>获取专属求职策略</strong><p>一次生成匹配分析、优化建议、求职信和面试问答。</p></div></li>
           </ol>
         ) : (
           <div className="privacy-dialog-list">
             <div><span><LockKeyhole size={18} /></span><div><strong>原文件留在本地</strong><p>PDF 仅在浏览器中解析，不上传原文件。</p></div></div>
-            <div><span><ShieldCheck size={18} /></span><div><strong>处理范围清晰透明</strong><p>点击分析后，提取的简历文字与 JD 将发送至本站服务器及 DeepSeek 进行处理。</p></div></div>
+            <div><span><ShieldCheck size={18} /></span><div><strong>处理范围清晰透明</strong><p>点击分析后，你填写的简历描述及提取的简历文字将发送至本站服务器及 DeepSeek 进行处理。</p></div></div>
             <div><span><Database size={18} /></span><div><strong>保存与否由你决定</strong><p>游客模式不保存历史；登录后可自行选择保存，并可随时删除已保存的数据。</p></div></div>
           </div>
         )}
