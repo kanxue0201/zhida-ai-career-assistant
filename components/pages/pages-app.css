@@ -214,7 +214,7 @@
 .ed-field-action:hover { text-decoration: underline; text-underline-offset: 3px; }
 .ed-field-error { color: #b3492a; font-size: 10.5px; }
 .ed-location-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ed-degree-grid { grid-template-columns: 125px 1fr; gap: 8px; }
+.ed-degree-grid { display: grid; grid-template-columns: 125px 1fr; gap: 8px; }
 .ed-period-field { padding: 11px 12px; border: 1px solid #e6ebe5; border-radius: 9px; background: #fafbf9; }
 .ed-period-row { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 8px; }
 .ed-period-row > span { color: #87938b; font-size: 10.5px; }

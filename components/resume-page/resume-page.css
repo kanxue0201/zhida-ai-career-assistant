@@ -211,7 +211,7 @@
 .rp-enterprise-matrix .rp-heading { margin-bottom: 18px; }
 .rp-enterprise-matrix .rp-heading h2 { font-size: 23px; }
 .rp-enterprise-matrix .rp-highlight-grid { grid-template-columns: 1fr; gap: 0; }
-.rp-enterprise-matrix .rp-highlight-card { display: grid; grid-template-columns: 32px 180px 1fr; align-items: baseline; padding: 16px 0; border: 0; border-top: 1px solid var(--rp-line); border-radius: 0; }
+.rp-enterprise-matrix .rp-highlight-card { display: grid; grid-template-columns: 32px 180px 1fr; gap: 12px; align-items: baseline; padding: 16px 0; border: 0; border-top: 1px solid var(--rp-line); border-radius: 0; }
 .rp-enterprise-matrix .rp-highlight-card h3, .rp-enterprise-matrix .rp-highlight-card p { margin-top: 0; }
 .rp-enterprise-matrix .rp-highlight-card h3 { font-size: 15px; }
 .rp-enterprise-matrix .rp-highlight-card p { font-size: 14px; }
